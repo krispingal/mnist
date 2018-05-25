@@ -25,7 +25,6 @@ import random
 import numpy as np
 
 class Network(object):
-	
     def __init__(self, sizes):
         self.num_layers = len(sizes)
         self.sizes = sizes
@@ -47,7 +46,7 @@ class Network(object):
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             if test_data:
-                print("Epoch {0}: {1} / {2}".format(j, self.evaluate(test_data), n_test))
+                print("Epoch {0}: {1}".format(j, self.evaluate(test_data)))
             else:
                 print(f'Epoch {j} complete')
         print('Done')
@@ -61,7 +60,7 @@ class Network(object):
             nabla_w = [nw+dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
         self.weights = [w-(eta/len(mini_batch))*nw for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b-(eta/len(mini_batch))*nb for b, nb in zip(self.biases, nabla_b)]
-	
+    
     def backprop(self, x, y):
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
@@ -90,7 +89,13 @@ class Network(object):
 
     def evaluate(self, test_data):
         test_results = [(np.argmax(self.feedForward(x)), y) for (x, y) in test_data]
-        return sum(int(x==y) for (x, y) in test_results)
+        accuracy = (sum(int(x==y) for (x, y) in test_results) / len(test_data))  
+        return accuracy
+    
+    def evaluate_test(self, test_data):
+        predictions = [{'y_hat' :self.feedForward(x), 'y': y} for (x, y) in test_data]
+        
+        return predictions
 
     def cost_derivative(self, output_activations, y):
         return (output_activations-y)
