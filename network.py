@@ -1,26 +1,7 @@
-# -*- coding: utf-8 -*-
-#
-#  network.py
-#  
-#  Copyright 2018 krispin <krispin@Griffin-ENVY>
-#  
-#  This program is free software; you can redistribute it and/or modify
-#  it under the terms of the GNU General Public License as published by
-#  the Free Software Foundation; either version 2 of the License, or
-#  (at your option) any later version.
-#  
-#  This program is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU General Public License for more details.
-#  
-#  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software
-#  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
-#  MA 02110-1301, USA.
-#  
-#  
-
+"""
+Most of this code is based on the code provided in chapter 1
+of Michael Nielsen's excellent book "Neural Networks and deep learning". For learning purposes I have tweaked things here and there.
+"""
 import random
 import numpy as np
 
@@ -88,14 +69,53 @@ class Network(object):
         return (nabla_b, nabla_w)
 
     def evaluate(self, test_data):
+        """ Function to evaluate model.
+
+        Parameters
+        ----------
+        test_data: test/validation data (List).
+        
+        Returns
+        -------
+        Accuracy: Accuracy of the network model w.r.t. to the data provided (int).
+
+        """
         test_results = [(np.argmax(self.feedForward(x)), y) for (x, y) in test_data]
         accuracy = (sum(int(x==y) for (x, y) in test_results) / len(test_data))  
         return accuracy
     
-    def evaluate_test(self, test_data):
+#    def get_test_result(self, test_data):
+        """ Function to get test results including top n misclassified as well as correctly classified images.
+
+        Parameters
+        ----------
+        test_data: test/validation data (List)
+
+        Returns
+        -------
+
+        """
+
+    def evaluate_test(self, test_data):  
         predictions = [{'y_hat' :self.feedForward(x), 'y': y} for (x, y) in test_data]
-        
         return predictions
+
+    def top_correctly_classified(self, test_data, n=5):
+        """ Function to get the top correctly classified images or the images that were misclassified the most. 
+        Since later on image data an get modified for better performance, 
+        we will try to use the images from the input test_data itself rather than the whatever data that goes into the model.
+
+        """
+        pred = self.evaluate_test(test_data)
+        correctly_classified = [{'y_hat':t['y_hat'], 'y':t['y'], 'idx':idx} if (np.argmax(t['y_hat']) == t['y']) else None for idx, t in enumerate(pred) ] 
+        #Create an array of their max predictions which is correct
+        max_pred = np.concatenate([max(t['y_hat']) for t in correctly_classified]).ravel()
+        #max_ids gives the idx in correctly_classified list that is a ordered set (not fully ordered though)
+        max_idx = np.argpartition(max_pred, -n)
+        #indexing is wrong in max_idx[:n]
+        max_elem = [ correctly_classified[idx] for idx in max_idx [-n:] ]
+        topn_idx = [ t['idx'] for t in max_elem ]
+        return topn_idx 
 
     def cost_derivative(self, output_activations, y):
         return (output_activations-y)
