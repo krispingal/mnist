@@ -101,20 +101,45 @@ class Network(object):
         return predictions
 
     def top_correctly_classified(self, test_data, n=5):
-        """ Function to get the top correctly classified images or the images that were misclassified the most. 
-        Since later on image data an get modified for better performance, 
+        """ Function to get the top correctly classified images. 
+        Since later on image data can get modified, for better performance, 
         we will try to use the images from the input test_data itself rather than the whatever data that goes into the model.
 
         """
         pred = self.evaluate_test(test_data)
-        correctly_classified = [{'y_hat':t['y_hat'], 'y':t['y'], 'idx':idx} if (np.argmax(t['y_hat']) == t['y']) else None for idx, t in enumerate(pred) ] 
+        correctly_classified_img = [{'y_hat':t['y_hat'], 'y':t['y'], 'idx':idx} for idx, t in enumerate(pred) if (np.argmax(t['y_hat']) == t['y'])] 
         #Create an array of their max predictions which is correct
-        max_pred = np.concatenate([max(t['y_hat']) for t in correctly_classified]).ravel()
+        max_pred = np.concatenate([max(t['y_hat']) for t in correctly_classified_img]).ravel()
         #max_ids gives the idx in correctly_classified list that is a ordered set (not fully ordered though)
         max_idx = np.argpartition(max_pred, -n)
         #indexing is wrong in max_idx[:n]
-        max_elem = [ correctly_classified[idx] for idx in max_idx [-n:] ]
+        max_elem = [ correctly_classified_img[idx] for idx in max_idx [-n:] ]
         topn_idx = [ t['idx'] for t in max_elem ]
+        return topn_idx 
+
+    def top_misclassified(self, test_data, n=5):
+        """ Function to get the top misclassified images. 
+        Since later on image data can get modified, for better performance, 
+        we will try to use the images from the input test_data itself rather than the whatever data that goes into the model.
+
+        Parameters
+        ----------
+        test_data: data on which analysis is to be done (List)
+        n: number of image indexes which need to be returned.
+
+        Returns
+        -------
+        indices of the top n misclassified images in the given test data.
+        """
+        pred = self.evaluate_test(test_data)
+        misclassified_img = [{'y_hat':t['y_hat'], 'y':t['y'], 'idx':idx} for idx, t in enumerate(pred) if (np.argmax(t['y_hat']) != t['y']) ] 
+        #Create an array of their max predictions which is correct
+        min_pred = np.concatenate([t['y_hat'][t['y']] for t in misclassified_img]).ravel()
+        #max_ids gives the idx in correctly_classified list that is a ordered set (not fully ordered though)
+        min_idx = np.argpartition(min_pred, n)
+        #indexing is wrong in max_idx[:n]
+        min_elem = [ misclassified_img[idx] for idx in min_idx [:n] ]
+        topn_idx = [ t['idx'] for t in min_elem ]
         return topn_idx 
 
     def cost_derivative(self, output_activations, y):
