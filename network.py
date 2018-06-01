@@ -27,9 +27,9 @@ class Network(object):
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             if test_data:
-                print("Epoch {0}: {1}".format(j, self.evaluate(test_data)))
+                print("Epoch: {0}, train err: {1:.4f} val err: {2:.4f}".format(j, self.evaluate(training_data, train=True), self.evaluate(test_data)))
             else:
-                print(f'Epoch {j} complete')
+                print('Epoch: {0}, train err: {1:.4f}'.format(j, self.evaluate(training_data, train=True)))
         print('Done')
     
     def update_mini_batch(self, mini_batch, eta):        
@@ -68,29 +68,51 @@ class Network(object):
             nabla_w[-l] = np.dot(delta, activations[-l-1].transpose())
         return (nabla_b, nabla_w)
 
-    def evaluate(self, test_data):
+    def evaluate(self, test_data, train=False):
         """ Function to evaluate model.
 
         Parameters
         ----------
         test_data : List
             test/validation data. 
+        train : bool (optional)
+            True if model should be evaluated on train. Default : False  
         Returns
         -------
         Accuracy : int 
             Accuracy of the network model w.r.t. to the data provided.
 
         """
-        test_results = [(np.argmax(self.feedForward(x)), y) for (x, y) in test_data]
-        accuracy = (sum(int(x==y) for (x, y) in test_results) / len(test_data))  
+        test_results = [(np.argmax(self.feedForward(x)), y) for (x, y) in test_data ]
+
+        if train:
+            accuracy = (sum(int(x==np.argmax(y)) for (x, y) in test_results) / len(test_data)) 
+        else :
+            accuracy = (sum(int(x==y) for (x, y) in test_results) / len(test_data))  
         return accuracy
     
-    def evaluate_test(self, test_data):  
+    def predict(self, test_data):
+        """Predicts class for the test data instance.
+
+        Parameters
+        ----------
+        test_data: tuple
+            In the form (x, y) where x is an array of pixel darkness and y is the actual output.
+
+        Returns
+        -------
+
+        """
+        x, y = test_data
+        y_hat = np.argmax(self.feedForward(x)) 
+        return (y_hat, y) 
+
+    def predict_proba_batch(self, test_data):  
         predictions = [{'y_hat' :self.feedForward(x), 'y': y} for (x, y) in test_data]
         return predictions
 
-    def top_misclassified(self, test_data, n=5):
-        """ Function to get the top misclassified images. 
+    def getn_misclassified(self, test_data, n=5):
+        """ Function to get n misclassified images. 
         Since later on image data can get modified, for better performance, 
         we will try to use the images from the input test_data itself rather than the whatever data that goes into the model.
 
@@ -107,15 +129,11 @@ class Network(object):
             Indices of the top n misclassified images in the given test data.
 
         """
-        pred = self.evaluate_test(test_data)
-        misclassified_img = [{'y_hat':t['y_hat'], 'y':t['y'], 'idx':idx} for idx, t in enumerate(pred) if (np.argmax(t['y_hat']) != t['y']) ] 
-        #Create an array of their incorect predictions
-        min_pred = np.concatenate([t['y_hat'][t['y']] for t in misclassified_img]).ravel()
-        #min_idx gives the idx in correctly_classified list that is a ordered set (not fully ordered though)
-        min_idx = np.argpartition(min_pred, n)
-        min_elem = [ misclassified_img[idx] for idx in min_idx [:n] ]
-        topn_idx = [ t['idx'] for t in min_elem ]
-        return topn_idx 
+        pred = self.predict_proba_batch(test_data)
+        misclassified_img = [{'y_hat':np.argmax(t['y_hat']), 'y':t['y'], 'conf': t['y_hat'][t['y']],'idx':idx} 
+                for idx, t in enumerate(pred) if (np.argmax(t['y_hat']) != t['y']) ]
+        misclassified_img_x = [ test_data[t['idx']][0] for t in misclassified_img ]
+        return misclassified_img_x[:n], misclassified_img[:n]
 
     def cost_derivative(self, output_activations, y):
         return (output_activations-y)
