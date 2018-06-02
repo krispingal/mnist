@@ -17,17 +17,15 @@ class Network(object):
             a = sigmoid(np.dot(w, a) + b)
         return a
             
-    def SGD(self, training_data, epochs, mini_batch_size, eta, test_data=None):
-        if test_data:
-            n_test = len(test_data)
+    def SGD(self, training_data, epochs, mini_batch_size, eta, val_data=None):
         n_train = len(training_data)
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [training_data[k: k+mini_batch_size] for k in range(0, n_train, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
-            if test_data:
-                print("Epoch: {0}, train err: {1:.4f} val err: {2:.4f}".format(j, self.evaluate(training_data, train=True), self.evaluate(test_data)))
+            if val_data:
+                print("Epoch: {0}, train err: {1:.4f} val err: {2:.4f}".format(j, self.evaluate(training_data, train=True), self.evaluate(val_data)))
             else:
                 print('Epoch: {0}, train err: {1:.4f}'.format(j, self.evaluate(training_data, train=True)))
         print('Done')
@@ -101,6 +99,10 @@ class Network(object):
 
         Returns
         -------
+        y_hat : int
+            The class or number preddicted by model. 
+        y : int
+            Actual class. 
 
         """
         x, y = test_data
@@ -111,29 +113,38 @@ class Network(object):
         predictions = [{'y_hat' :self.feedForward(x), 'y': y} for (x, y) in test_data]
         return predictions
 
-    def getn_misclassified(self, test_data, n=5):
+    def getn_misclassified(self, test_data, n=None):
         """ Function to get n misclassified images. 
         Since later on image data can get modified, for better performance, 
-        we will try to use the images from the input test_data itself rather than the whatever data that goes into the model.
+        we will try to use the images from the input test_data itself rather 
+        than the whatever data that goes into the model. There is a random 
+        shuffle, so that the same images are not shown every time. 
 
         Parameters
         ----------
         test_data : List
             data on which analysis is to be done
         n : int (optional)
-            number of image indexes which need to be returned. Default : 5
+            number of image indexes which need to be returned. Default : None
 
         Returns
         -------
-        topn_idx : List of int 
-            Indices of the top n misclassified images in the given test data.
+        misclassified_img_x : List of array
+            List of mnist image data which have been misclassified. 
+        misclassified_img_pred : List of dicts
+            Dicts contains the following attributes 
+            y : actual class or number
+            y_hat : class predicted by model
+            conf : the confidence the model gave for y_hat 
 
         """
+        random.shuffle(test_data)
         pred = self.predict_proba_batch(test_data)
-        misclassified_img = [{'y_hat':np.argmax(t['y_hat']), 'y':t['y'], 'conf': t['y_hat'][t['y']],'idx':idx} 
+        misclassified_img_pred = [{'y_hat':np.argmax(t['y_hat']), 'y':t['y'], 'conf': max(t['y_hat']),'idx':idx} 
                 for idx, t in enumerate(pred) if (np.argmax(t['y_hat']) != t['y']) ]
-        misclassified_img_x = [ test_data[t['idx']][0] for t in misclassified_img ]
-        return misclassified_img_x[:n], misclassified_img[:n]
+        misclassified_img_x = [ test_data[t['idx']][0] for t in misclassified_img_pred ]
+
+        return misclassified_img_x[:n], misclassified_img_pred[:n]
 
     def cost_derivative(self, output_activations, y):
         return (output_activations-y)
