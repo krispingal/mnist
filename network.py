@@ -4,6 +4,8 @@ of Michael Nielsen's excellent book "Neural Networks and deep learning". For lea
 """
 import random
 import numpy as np
+#For saving and loading network
+import json
 
 class Network(object):
     def __init__(self, sizes):
@@ -19,15 +21,20 @@ class Network(object):
             
     def SGD(self, training_data, epochs, mini_batch_size, eta, val_data=None):
         n_train = len(training_data)
+        metrics = []
         for j in range(epochs):
             random.shuffle(training_data)
             mini_batches = [training_data[k: k+mini_batch_size] for k in range(0, n_train, mini_batch_size)]
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             if val_data:
-                print("Epoch: {0}, train err: {1:.4f} val err: {2:.4f}".format(j, self.evaluate(training_data, train=True), self.evaluate(val_data)))
+                metric = {'Epoch' : j, 'train_err' : self.evaluate(training_data, train=True), 'val_err' : self.evaluate(val_data) }
+                print("Epoch: {0}, train err: {1:.4f} val err: {2:.4f}".format(j, metric['train_err'], metric['val_err']))
+                metrics.append(metric)
             else:
-                print('Epoch: {0}, train err: {1:.4f}'.format(j, self.evaluate(training_data, train=True)))
+                metric = {'Epoch' : j, 'train_err' : self.evaluate(training_data, train=True) }
+                print('Epoch: {0}, train err: {1:.4f}'.format(j, metric['train_err']))
+                metrics.append(metric)
         print('Done')
     
     def update_mini_batch(self, mini_batch, eta):        
@@ -149,6 +156,30 @@ class Network(object):
     def cost_derivative(self, output_activations, y):
         return (output_activations-y)
 
+    def save_model(self, filename):
+        """Save the neural network's weights and biases to a file.
+
+        Parameters
+        ----------
+        filename : String
+            will save network to filename.
+
+        """
+        data = {"sizes": self.sizes,
+                "weights": [w.tolist() for w in self.weights],
+                "biases": [b.tolist() for b in self.biases]
+                }
+        with open(filename, 'w') as f:
+            json.dump(data, f)
+
+def load_model(filename):
+    f = open(filename, 'r')
+    data = json.load(f)
+    f.close()
+    net = Network(data['sizes'])
+    net.weights = [np.array(w) for w in data['weights']]
+    net.biases = [np.array(b) for b in data['biases']]
+    return net 
 
 def sigmoid(z):
     return 1.0/ (1.0+np.exp(-z))
