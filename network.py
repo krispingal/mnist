@@ -173,6 +173,20 @@ class Network(object):
             json.dump(data, f)
 
 def load_model(filename):
+    """ Loads a pretrained model.
+
+    Parameters
+    ----------
+    filename : String
+        Absolute filename for this pre-trained model.
+
+    Returns
+    -------
+    net : object of class Network
+        net will be initialized with the same weights, biases and will 
+        contain the same number of layers and units.
+
+    """
     f = open(filename, 'r')
     data = json.load(f)
     f.close()
